@@ -26,8 +26,17 @@ app.add_middleware(
 )
 
 supabase = create_client(settings.supabase_url, settings.supabase_key)
-embedder = TextEmbedding(model_name=settings.embedding_model)
 claude = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+
+# Lazy loading du modèle d'embeddings (évite timeout healthcheck)
+_embedder = None
+
+
+def get_embedder():
+    global _embedder
+    if _embedder is None:
+        _embedder = TextEmbedding(model_name=settings.embedding_model)
+    return _embedder
 
 
 # --- Helpers ---
@@ -95,7 +104,7 @@ async def upload_document(
     chunks = chunk_text(text, settings.chunk_size)
 
     # 3. Générer les embeddings
-    embeddings = [e.tolist() for e in embedder.embed(chunks)]
+    embeddings = [e.tolist() for e in get_embedder().embed(chunks)]
 
     # 4. Insérer les chunks avec embeddings
     rows = [
@@ -120,7 +129,7 @@ async def upload_document(
 @app.post("/search", response_model=SearchResponse)
 async def search(req: SearchRequest):
     # 1. Embedding de la question
-    query_embedding = list(embedder.embed([req.question]))[0].tolist()
+    query_embedding = list(get_embedder().embed([req.question]))[0].tolist()
 
     # 2. Recherche vectorielle via la fonction Supabase
     result = supabase.rpc(
