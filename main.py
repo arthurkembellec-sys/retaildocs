@@ -2,7 +2,7 @@ from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
-from fastembed import TextEmbedding
+# fastembed importé en lazy pour accélérer le démarrage
 from supabase import create_client
 from PyPDF2 import PdfReader
 import anthropic
@@ -35,6 +35,7 @@ _embedder = None
 def get_embedder():
     global _embedder
     if _embedder is None:
+        from fastembed import TextEmbedding
         _embedder = TextEmbedding(model_name=settings.embedding_model)
     return _embedder
 
