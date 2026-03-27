@@ -414,25 +414,33 @@
         </div>
         <div class="meta-row">
           <div class="field">
-            <label>Boutique</label>
-            <input type="text" id="meta-store" placeholder="ex: Herald Square" />
+            <label>Aéroport</label>
+            <input type="text" id="meta-airport" placeholder="ex: CDG, Doha, JFK" />
           </div>
           <div class="field">
-            <label>Année</label>
-            <input type="text" id="meta-year" placeholder="ex: 2018" />
+            <label>Boutique</label>
+            <input type="text" id="meta-store" placeholder="ex: Terminal 1 - Gate A" />
           </div>
         </div>
-        <div class="field">
-          <label>Type de document</label>
-          <select id="meta-type">
-            <option value="">— Choisir —</option>
-            <option value="Vendor Criteria">Vendor Criteria</option>
-            <option value="Brand Guidelines">Brand Guidelines</option>
-            <option value="Store Operations">Store Operations</option>
-            <option value="Compliance">Compliance</option>
-            <option value="Contrat">Contrat</option>
-            <option value="Autre">Autre</option>
-          </select>
+        <div class="meta-row">
+          <div class="field">
+            <label>Année</label>
+            <input type="text" id="meta-year" placeholder="ex: 2024" />
+          </div>
+          <div class="field">
+            <label>Type de document</label>
+            <select id="meta-type">
+              <option value="">— Choisir —</option>
+              <option value="Vendor Criteria">Vendor Criteria</option>
+              <option value="Brand Guidelines">Brand Guidelines</option>
+              <option value="Normes Feu">Normes Feu</option>
+              <option value="Normes Sécurité">Normes Sécurité</option>
+              <option value="Store Operations">Store Operations</option>
+              <option value="Compliance">Compliance</option>
+              <option value="Contrat">Contrat</option>
+              <option value="Autre">Autre</option>
+            </select>
+          </div>
         </div>
         <button class="btn-primary" id="add-btn" onclick="addDocument()" disabled>
           ＋ Ajouter à la base
@@ -493,7 +501,7 @@ const API = window.location.origin;
 // ─── State ───────────────────────────────────────────────────────────────────
 let documents = [];
 let selectedFile = null;
-let activeFilters = { retailer: null, country: null };
+let activeFilters = { retailer: null, country: null, airport: null };
 let isLoading = false;
 
 // ─── Init: charger les documents depuis le backend ───────────────────────────
@@ -508,6 +516,7 @@ async function loadDocuments() {
       name: d.filename,
       retailer: d.retailer || 'Non renseigné',
       country: d.country || 'Non renseigné',
+      airport: d.airport || '',
       store: d.store || '',
       year: d.year || '',
       type: d.doc_type || ''
@@ -551,6 +560,7 @@ async function addDocument() {
   formData.append('file', selectedFile);
   formData.append('retailer', document.getElementById('meta-retailer').value || '');
   formData.append('country', document.getElementById('meta-country').value || '');
+  formData.append('airport', document.getElementById('meta-airport').value || '');
   formData.append('store', document.getElementById('meta-store').value || '');
   const year = document.getElementById('meta-year').value;
   if (year) formData.append('year', parseInt(year));
@@ -574,6 +584,7 @@ async function addDocument() {
   document.getElementById('file-name').style.display = 'none';
   document.getElementById('meta-retailer').value = '';
   document.getElementById('meta-country').value = '';
+  document.getElementById('meta-airport').value = '';
   document.getElementById('meta-store').value = '';
   document.getElementById('meta-year').value = '';
   document.getElementById('meta-type').value = '';
@@ -595,7 +606,8 @@ function renderDocs() {
       <div class="doc-card-name">📄 ${doc.name}</div>
       <div class="doc-tags">
         ${doc.retailer !== 'Non renseigné' ? `<span class="tag tag-retailer">${doc.retailer}</span>` : ''}
-        ${doc.country !== 'Non renseigné' ? `<span class="tag tag-country">${doc.country}</span>` : ''}
+        ${doc.airport ? `<span class="tag tag-country">${doc.airport}</span>` : ''}
+        ${doc.country !== 'Non renseigné' ? `<span class="tag tag-year">${doc.country}</span>` : ''}
         ${doc.type ? `<span class="tag tag-type">${doc.type}</span>` : ''}
         ${doc.year ? `<span class="tag tag-year">${doc.year}</span>` : ''}
       </div>
@@ -619,10 +631,12 @@ function updateContextBar() {
   bar.style.display = 'flex';
 
   const retailers = [...new Set(documents.map(d => d.retailer).filter(r => r && r !== 'Non renseigné'))];
+  const airports = [...new Set(documents.map(d => d.airport).filter(a => a))];
   const countries = [...new Set(documents.map(d => d.country).filter(c => c && c !== 'Non renseigné'))];
 
   pills.innerHTML = [
     ...retailers.map(r => `<button class="filter-pill ${activeFilters.retailer===r?'active':''}" onclick="toggleFilter('retailer','${r}')"><span class="pill-dot" style="background:var(--accent)"></span>${r}</button>`),
+    ...airports.map(a => `<button class="filter-pill ${activeFilters.airport===a?'active':''}" onclick="toggleFilter('airport','${a}')"><span class="pill-dot" style="background:var(--gold)"></span>${a}</button>`),
     ...countries.map(c => `<button class="filter-pill ${activeFilters.country===c?'active':''}" onclick="toggleFilter('country','${c}')"><span class="pill-dot" style="background:var(--accent2)"></span>${c}</button>`)
   ].join('');
 }
@@ -632,7 +646,7 @@ function toggleFilter(type, val) {
   updateContextBar();
 }
 function clearFilters() {
-  activeFilters = { retailer: null, country: null };
+  activeFilters = { retailer: null, country: null, airport: null };
   updateContextBar();
 }
 
@@ -676,6 +690,7 @@ async function sendQuestion() {
   try {
     const body = { question };
     if (activeFilters.retailer) body.retailer = activeFilters.retailer;
+    if (activeFilters.airport) body.airport = activeFilters.airport;
     if (activeFilters.country) body.country = activeFilters.country;
 
     const res = await fetch(`${API}/search`, {

@@ -71,6 +71,7 @@ async def upload_document(
     file: UploadFile = File(...),
     retailer: Optional[str] = Form(None),
     country: Optional[str] = Form(None),
+    airport: Optional[str] = Form(None),
     store: Optional[str] = Form(None),
     year: Optional[int] = Form(None),
     doc_type: Optional[str] = Form(None),
@@ -92,6 +93,7 @@ async def upload_document(
                 "filename": file.filename,
                 "retailer": retailer,
                 "country": country,
+                "airport": airport,
                 "store": store,
                 "year": year,
                 "doc_type": doc_type,
@@ -140,6 +142,7 @@ async def search(req: SearchRequest):
             "match_count": settings.top_k,
             "filter_retailer": req.retailer,
             "filter_country": req.country,
+            "filter_airport": req.airport,
             "filter_store": req.store,
             "filter_year": req.year,
             "filter_doc_type": req.doc_type,
@@ -154,7 +157,7 @@ async def search(req: SearchRequest):
     sources = []
     for match in result.data:
         context_parts.append(
-            f"[Source: {match['filename']} | {match['retailer']} | {match['country']}]\n{match['content']}"
+            f"[Source: {match['filename']} | {match['retailer']} | {match['airport']} | {match['country']}]\n{match['content']}"
         )
         sources.append(
             ChunkResult(
@@ -163,6 +166,7 @@ async def search(req: SearchRequest):
                 filename=match["filename"],
                 retailer=match.get("retailer"),
                 country=match.get("country"),
+                airport=match.get("airport"),
                 store=match.get("store"),
                 year=match.get("year"),
                 doc_type=match.get("doc_type"),
@@ -228,6 +232,8 @@ def serve_frontend():
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 if __name__ == "__main__":
+    import os
     import uvicorn
 
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
